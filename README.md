@@ -6,7 +6,7 @@ https://github.com/android/compose-samples/tree/main/Crane/app/src/main/java/and
 Usage:
 
 CalendarPicker:
-
+```
 CalendarPicker(date = dropDrownDate,
                                       headerBackColor = headerBackColor,
                                       headerTextColor = headerTextColor,
@@ -15,9 +15,9 @@ CalendarPicker(date = dropDrownDate,
                                       onDayClicked = { newDate ->                                          
                                           onDayClicked(newDate)
                                       })
-                                      
+ ```                                  
 CalendarDropDown:
-
+```
 CalendarDropDown(label = "Fecha de Registro",
                                                paddingValues = PaddingValues(horizontal = 6.dp),
                                                textFieldColors = this@MainScreenComposables.textFieldColors(),
@@ -31,7 +31,7 @@ CalendarDropDown(label = "Fecha de Registro",
                               ){ newDate ->
                                   date = newDate
                               }
+```
 
-Show video in repo for usage.
-
+[![Show video in repo for usage.](https://www.youtube.com/watch?v=r2m9KNps4NY)
 Regards!
