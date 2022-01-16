@@ -4,6 +4,7 @@ package com.github.tarsysdev.composables
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -14,12 +15,15 @@ import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -30,7 +34,9 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
+import java.text.SimpleDateFormat
 import java.util.*
+import java.util.regex.Pattern
 import kotlin.coroutines.CoroutineContext
 
 private typealias CalendarWeek = List<CalendarDay>
@@ -783,6 +789,7 @@ private fun itemsCalendarMonth(
 @Composable
 fun CalendarPicker(
     date: Date,
+    elevation: Dp = 0.dp,
     headerBackColor: Color = Color.Transparent,
     headerTextColor: Color = Color.Black,
     headerButtonsBackColor: Color = Color.DarkGray,
@@ -793,7 +800,7 @@ fun CalendarPicker(
 
     Card(modifier = Modifier.width(200.dp).height(340.dp),
          shape = MaterialTheme.shapes.small,
-         elevation = 4.dp
+         elevation = elevation
     ) {
         itemsCalendarMonth(viewModel = viewModel,
                            headerBackColor = headerBackColor,
@@ -804,4 +811,84 @@ fun CalendarPicker(
     }
 
     viewModel.setDate(date)
+}
+
+@Composable
+fun CalendarDropDown(label: String,
+                     dateFormat: String = "dd/MM/yyyy",
+                     editorWidth: Dp,
+                     paddingValues: PaddingValues = PaddingValues(0.dp),
+                     textFieldColors: TextFieldColors = TextFieldDefaults.textFieldColors(),
+                     date: Date,
+                     headerBackColor: Color = Color.Transparent,
+                     headerTextColor: Color = Color.Black,
+                     headerButtonsBackColor: Color = Color.DarkGray,
+                     selectedDayBackColor: Color = Color.Green,
+                     onDayClicked: (Date) -> Unit){
+    var dateStr by remember { mutableStateOf(TextFieldValue (date.format(dateFormat))) }
+    var expandedDropDown by remember { mutableStateOf(false) }
+    var dropDrownDate by remember { mutableStateOf(date) }
+    Box(modifier = Modifier.width(editorWidth).padding(paddingValues)){
+        OutlinedTextField(value = dateStr,
+                          modifier = Modifier.fillMaxWidth(),
+                          label = { Text(label) },
+                          colors = textFieldColors,
+                          singleLine = true,
+
+                          trailingIcon = {
+
+                              Icon(imageVector = Icons.Rounded.DateRange,
+                                   contentDescription = null,
+                                   modifier = Modifier.clickable(enabled = true) {
+                                        expandedDropDown = !expandedDropDown
+                                   }
+                              )
+
+                              DropdownMenu(expanded = expandedDropDown,
+                                           onDismissRequest = { expandedDropDown = false }
+                              ) {
+                                  CalendarPicker(date = dropDrownDate,
+                                      headerBackColor = headerBackColor,
+                                      headerTextColor = headerTextColor,
+                                      headerButtonsBackColor = headerButtonsBackColor,
+                                      selectedDayBackColor = selectedDayBackColor,
+                                      onDayClicked = { newDate ->
+                                          dateStr = TextFieldValue(newDate.format(dateFormat))
+                                          expandedDropDown = false
+                                          onDayClicked(newDate)
+                                      })
+                              }
+                          },
+                          onValueChange = { newDate ->
+                             try{
+                                 val calNow = Calendar.getInstance()
+                                 val currentMonth = calNow.get(Calendar.MONTH) + 1
+                                 val currentYear = calNow.get(Calendar.YEAR)
+                                 var nDate = newDate.text
+                                 val selectionStart = newDate.text.length
+                                 if (!Pattern.compile("\\d\\d/\\d\\d/\\d\\d\\d\\d]").matcher(nDate).matches()){
+                                     nDate = when(nDate.length){
+                                         2 -> "$nDate/${currentMonth.format("00")}/$currentYear"
+                                         5 -> "$nDate/$currentYear"
+                                         else -> nDate
+                                     }
+                                 }
+
+                                 if (nDate.length > 10)
+                                     nDate = nDate.substring(0, 10)
+
+                                 if (nDate.length == 10)
+                                    SimpleDateFormat(dateFormat).parse(nDate)
+                                 if (selectionStart <= 5)
+                                    dateStr = newDate.copy(nDate, selection = TextRange(selectionStart + 1, nDate.length))
+                                 else
+                                     dateStr = newDate.copy(nDate)
+
+                                dropDrownDate = SimpleDateFormat(dateFormat).parse(nDate)
+                             }catch (ex: Exception){
+
+                             }
+                          }
+        )
+    }
 }
