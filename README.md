@@ -33,5 +33,9 @@ CalendarDropDown(label = "Fecha de Registro",
                               }
 ```
 
-[![Show video in repo for usage.](https://www.youtube.com/watch?v=r2m9KNps4NY)
+Show video in youtube.
+
+[![Show video in youtube.](https://img.youtube.com/vi/r2m9KNps4NY/hqdefault.jpg)](https://www.youtube.com/watch?v=r2m9KNps4NY)
+
+
 Regards!
