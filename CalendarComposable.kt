@@ -1,12 +1,17 @@
-@file:OptIn(ExperimentalMaterialApi::class)
+@file:OptIn(ExperimentalMaterialApi::class, ExperimentalComposeUiApi::class, ExperimentalComposeUiApi::class,
+    ExperimentalComposeUiApi::class, ExperimentalComposeUiApi::class
+)
 
 package com.github.tarsysdev.composables
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -14,15 +19,22 @@ import androidx.compose.material.icons.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.*
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -187,7 +199,7 @@ private enum class Month{
 
 //region Private extension functions
 
-private inline fun <T>Flow<out T>.collectSync(crossinline bodyCollect: (T) -> Unit) {
+private inline fun <T>Flow<T>.collectSync(crossinline bodyCollect: (T) -> Unit) {
     val flow = this
 
     MainScope().launch {
@@ -816,31 +828,36 @@ fun CalendarPicker(
 @Composable
 fun CalendarDropDown(label: String,
                      dateFormat: String = "dd/MM/yyyy",
+                     focusRequester: FocusRequester? = null,
                      editorWidth: Dp,
                      paddingValues: PaddingValues = PaddingValues(0.dp),
                      textFieldColors: TextFieldColors = TextFieldDefaults.textFieldColors(),
                      date: Date,
+                     readOnly: Boolean = false,
                      headerBackColor: Color = Color.Transparent,
                      headerTextColor: Color = Color.Black,
                      headerButtonsBackColor: Color = Color.DarkGray,
                      selectedDayBackColor: Color = Color.Green,
                      onDayClicked: (Date) -> Unit){
-    var dateStr by remember { mutableStateOf(TextFieldValue (date.format(dateFormat))) }
+
+    val focusManager = LocalFocusManager.current
+    var dateStr by remember { mutableStateOf(TextFieldValue ("")) }
     var expandedDropDown by remember { mutableStateOf(false) }
-    var dropDrownDate by remember { mutableStateOf(date) }
+    var dropDrownDate by remember { mutableStateOf(Calendar.getInstance().also { c -> c.timeInMillis = 0 }.time) }
+
     Box(modifier = Modifier.width(editorWidth).padding(paddingValues)){
         OutlinedTextField(value = dateStr,
-                          modifier = Modifier.fillMaxWidth(),
+                          modifier = Modifier.fillMaxWidth().focusRequester(focusRequester ?: FocusRequester.Default),
                           label = { Text(label) },
                           colors = textFieldColors,
+                          readOnly = readOnly,
                           singleLine = true,
-
                           trailingIcon = {
-
                               Icon(imageVector = Icons.Rounded.DateRange,
                                    contentDescription = null,
-                                   modifier = Modifier.clickable(enabled = true) {
-                                        expandedDropDown = !expandedDropDown
+                                   modifier = Modifier.focusable(false).clickable(true) {
+                                        if (!readOnly)
+                                            expandedDropDown = !expandedDropDown
                                    }
                               )
 
@@ -866,6 +883,8 @@ fun CalendarDropDown(label: String,
                                  val currentYear = calNow.get(Calendar.YEAR)
                                  var nDate = newDate.text
                                  val selectionStart = newDate.text.length
+
+                                 nDate.replace("\t", "")
                                  if (!Pattern.compile("\\d\\d/\\d\\d/\\d\\d\\d\\d]").matcher(nDate).matches()){
                                      nDate = when(nDate.length){
                                          2 -> "$nDate/${currentMonth.format("00")}/$currentYear"
@@ -890,5 +909,8 @@ fun CalendarDropDown(label: String,
                              }
                           }
         )
+        dateStr = TextFieldValue(date.format(dateFormat))
+        dropDrownDate = date
+
     }
 }
