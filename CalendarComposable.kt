@@ -840,14 +840,18 @@ fun CalendarDropDown(label: String,
                      selectedDayBackColor: Color = Color.Green,
                      onDayClicked: (Date) -> Unit){
 
-    val focusManager = LocalFocusManager.current
     var dateStr by remember { mutableStateOf(TextFieldValue ("")) }
     var expandedDropDown by remember { mutableStateOf(false) }
     var dropDrownDate by remember { mutableStateOf(Calendar.getInstance().also { c -> c.timeInMillis = 0 }.time) }
 
     Box(modifier = Modifier.width(editorWidth).padding(paddingValues)){
         OutlinedTextField(value = dateStr,
-                          modifier = Modifier.fillMaxWidth().focusRequester(focusRequester ?: FocusRequester.Default),
+                          modifier = Modifier.fillMaxWidth().focusRequester(focusRequester ?: FocusRequester.Default)
+                              .onFocusEvent { state ->
+                                    if(state.isCaptured){
+                                        //dateStr= dateStr.copy(dateStr.text, selection = TextRange(0, dateStr.text.length))
+                                    }
+                              }   ,
                           label = { Text(label) },
                           colors = textFieldColors,
                           readOnly = readOnly,
@@ -877,40 +881,48 @@ fun CalendarDropDown(label: String,
                               }
                           },
                           onValueChange = { newDate ->
-                             try{
-                                 val calNow = Calendar.getInstance()
-                                 val currentMonth = calNow.get(Calendar.MONTH) + 1
-                                 val currentYear = calNow.get(Calendar.YEAR)
-                                 var nDate = newDate.text
-                                 val selectionStart = newDate.text.length
+                              try{
+                                  val currentDate = dateStr.text
+                                  val calNow = Calendar.getInstance()
+                                  val currentMonth = calNow.get(Calendar.MONTH) + 1
+                                  val currentYear = calNow.get(Calendar.YEAR)
+                                  val tmpDate = newDate.text.replace(currentDate, "")
 
-                                 nDate.replace("\t", "")
-                                 if (!Pattern.compile("\\d\\d/\\d\\d/\\d\\d\\d\\d]").matcher(nDate).matches()){
-                                     nDate = when(nDate.length){
-                                         2 -> "$nDate/${currentMonth.format("00")}/$currentYear"
-                                         5 -> "$nDate/$currentYear"
-                                         else -> nDate
-                                     }
-                                 }
+                                  var nDate = if (currentDate.length > tmpDate.length)
+                                                    "$tmpDate${currentDate.substring(tmpDate.length)}"
+                                              else
+                                                    newDate.text
+                                  val selectionStart = when (tmpDate.length){
+                                        2, 5 -> tmpDate.length
+                                        else -> tmpDate.length - 1
+                                  }
 
-                                 if (nDate.length > 10)
-                                     nDate = nDate.substring(0, 10)
+                                  nDate.replace("\t", "")
 
-                                 if (nDate.length == 10)
-                                    SimpleDateFormat(dateFormat).parse(nDate)
-                                 if (selectionStart <= 5)
-                                    dateStr = newDate.copy(nDate, selection = TextRange(selectionStart + 1, nDate.length))
-                                 else
-                                     dateStr = newDate.copy(nDate)
+                                  if (!Pattern.compile("\\d\\d/\\d\\d/\\d\\d\\d\\d").matcher(nDate).matches()){
+                                      nDate = when(nDate.length){
+                                          2 -> "$nDate/${currentMonth.format("00")}/$currentYear"
+                                          5 -> "$nDate/$currentYear"
+                                          else -> nDate
+                                      }
+                                  }
 
-                                dropDrownDate = SimpleDateFormat(dateFormat).parse(nDate)
-                             }catch (ex: Exception){
+                                  if (nDate.length > 10)
+                                      nDate = nDate.substring(0, 10)
 
-                             }
+                                  if (nDate.length == 10)
+                                      SimpleDateFormat(dateFormat).parse(nDate)
+
+                                  dateStr = TextFieldValue(nDate).copy(nDate, selection = TextRange(selectionStart + 1, nDate.length))
+                                  dropDrownDate = SimpleDateFormat(dateFormat).parse(nDate)
+                              }catch (ex: Exception){
+
+                              }
                           }
         )
-        dateStr = TextFieldValue(date.format(dateFormat))
-        dropDrownDate = date
-
+        if (dateStr.text == ""){
+            dateStr = TextFieldValue(date.format(dateFormat))
+            dropDrownDate = date
+        }
     }
 }
