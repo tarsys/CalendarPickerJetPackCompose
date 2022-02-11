@@ -832,7 +832,7 @@ fun CalendarDropDown(label: String,
                      editorWidth: Dp,
                      paddingValues: PaddingValues = PaddingValues(0.dp),
                      textFieldColors: TextFieldColors = TextFieldDefaults.textFieldColors(),
-                     date: Date,
+                     date: MutableState<Date?>,
                      readOnly: Boolean = false,
                      headerBackColor: Color = Color.Transparent,
                      headerTextColor: Color = Color.Black,
@@ -846,12 +846,7 @@ fun CalendarDropDown(label: String,
 
     Box(modifier = Modifier.width(editorWidth).padding(paddingValues)){
         OutlinedTextField(value = dateStr,
-                          modifier = Modifier.fillMaxWidth().focusRequester(focusRequester ?: FocusRequester.Default)
-                              .onFocusEvent { state ->
-                                    if(state.isCaptured){
-                                        //dateStr= dateStr.copy(dateStr.text, selection = TextRange(0, dateStr.text.length))
-                                    }
-                              }   ,
+                          modifier = Modifier.fillMaxWidth().focusRequester(focusRequester ?: FocusRequester.Default),
                           label = { Text(label) },
                           colors = textFieldColors,
                           readOnly = readOnly,
@@ -881,48 +876,51 @@ fun CalendarDropDown(label: String,
                               }
                           },
                           onValueChange = { newDate ->
-                              try{
-                                  val currentDate = dateStr.text
-                                  val calNow = Calendar.getInstance()
-                                  val currentMonth = calNow.get(Calendar.MONTH) + 1
-                                  val currentYear = calNow.get(Calendar.YEAR)
-                                  val tmpDate = newDate.text.replace(currentDate, "")
+                              if (newDate.text.isNotEmpty()){
+                                  try{
+                                      val currentDate = dateStr.text
+                                      val calNow = Calendar.getInstance()
+                                      val currentMonth = calNow.get(Calendar.MONTH) + 1
+                                      val currentYear = calNow.get(Calendar.YEAR)
+                                      val tmpDate = newDate.text.replace(currentDate, "")
 
-                                  var nDate = if (currentDate.length > tmpDate.length)
-                                                    "$tmpDate${currentDate.substring(tmpDate.length)}"
-                                              else
-                                                    newDate.text
-                                  val selectionStart = when (tmpDate.length){
-                                        2, 5 -> tmpDate.length
-                                        else -> tmpDate.length - 1
-                                  }
-
-                                  nDate.replace("\t", "")
-
-                                  if (!Pattern.compile("\\d\\d/\\d\\d/\\d\\d\\d\\d").matcher(nDate).matches()){
-                                      nDate = when(nDate.length){
-                                          2 -> "$nDate/${currentMonth.format("00")}/$currentYear"
-                                          5 -> "$nDate/$currentYear"
-                                          else -> nDate
+                                      var nDate = if (currentDate.length > tmpDate.length)
+                                          "$tmpDate${currentDate.substring(tmpDate.length)}"
+                                      else
+                                          newDate.text
+                                      val selectionStart = when (tmpDate.length){
+                                          2, 5 -> tmpDate.length
+                                          else -> tmpDate.length - 1
                                       }
+
+                                      nDate.replace("\t", "")
+
+                                      if (!Pattern.compile("\\d\\d/\\d\\d/\\d\\d\\d\\d").matcher(nDate).matches()){
+                                          nDate = when(nDate.length){
+                                              2 -> "$nDate/${currentMonth.format("00")}/$currentYear"
+                                              5 -> "$nDate/$currentYear"
+                                              else -> nDate
+                                          }
+                                      }
+
+                                      if (nDate.length > 10)
+                                          nDate = nDate.substring(0, 10)
+
+                                      if (nDate.length == 10)
+                                          SimpleDateFormat(dateFormat).parse(nDate)
+
+                                      dropDrownDate = SimpleDateFormat(dateFormat).parse(nDate)
+                                      date.value = dropDrownDate
+                                      dateStr = TextFieldValue(nDate).copy(nDate, selection = TextRange(selectionStart + 1, nDate.length))
+                                  }catch (ex: Exception){
+
                                   }
-
-                                  if (nDate.length > 10)
-                                      nDate = nDate.substring(0, 10)
-
-                                  if (nDate.length == 10)
-                                      SimpleDateFormat(dateFormat).parse(nDate)
-
-                                  dateStr = TextFieldValue(nDate).copy(nDate, selection = TextRange(selectionStart + 1, nDate.length))
-                                  dropDrownDate = SimpleDateFormat(dateFormat).parse(nDate)
-                              }catch (ex: Exception){
-
                               }
                           }
         )
-        if (dateStr.text == ""){
-            dateStr = TextFieldValue(date.format(dateFormat))
-            dropDrownDate = date
+        if (dateStr.text == "" || dateStr.text != (date.value?.format(dateFormat) ?: "")){
+            dateStr = TextFieldValue(date.value?.format(dateFormat) ?: "")
+            dropDrownDate = date.value
         }
     }
 }
